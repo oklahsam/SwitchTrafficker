@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+	<RuntimeIdentifiers>linux-x64;win10-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="SwitchTrafficker.conf" />
+    <None Remove="SwitchTrafficker.service" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="SwitchTrafficker.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SwitchTrafficker.service">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="InfluxDB.Client" Version="4.0.0" />
+    <PackageReference Include="Lextm.SharpSnmpLib" Version="12.4.0" />
+  </ItemGroup>
+
+</Project>
