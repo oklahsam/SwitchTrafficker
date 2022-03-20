@@ -19,16 +19,32 @@ namespace SwitchTrafficker
         {
             Logging.InitializeLogs();
 
-            string configPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf" });
-            var config = File.ReadAllLines(configPath).Where(x => !x.StartsWith("#") && !string.IsNullOrWhiteSpace(x)).ToArray();
+            string[] config;
 
-            string influxdb = config.Where(x => x.StartsWith("influxdb")).FirstOrDefault().Split('=',2)[1].Trim();
-            string influxbucket = config.Where(x => x.StartsWith("influxbucket")).FirstOrDefault().Split('=',2)[1].Trim();
-            string influxtoken = config.Where(x => x.StartsWith("influxtoken")).FirstOrDefault().Split('=',2)[1].Trim();
-            string influxorg = config.Where(x => x.StartsWith("influxorg")).FirstOrDefault().Split('=',2)[1].Trim();
+            string influxdb = string.Empty;
+            string influxbucket = string.Empty;
+            string influxtoken = string.Empty;
+            string influxorg = string.Empty;
+            string snmpversion = string.Empty;
 
-            string snmpversion = config.Where(x => x.StartsWith("snmpversion")).FirstOrDefault().Split('=', 2)[1].Trim();
+            try
+            {
+                string configPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf" });
+                config = File.ReadAllLines(configPath).Where(x => !x.StartsWith("#") && !string.IsNullOrWhiteSpace(x)).ToArray();
 
+                influxdb = config.Where(x => x.StartsWith("influxdb")).FirstOrDefault().Split('=', 2)[1].Trim();
+                influxbucket = config.Where(x => x.StartsWith("influxbucket")).FirstOrDefault().Split('=', 2)[1].Trim();
+                influxtoken = config.Where(x => x.StartsWith("influxtoken")).FirstOrDefault().Split('=', 2)[1].Trim();
+                influxorg = config.Where(x => x.StartsWith("influxorg")).FirstOrDefault().Split('=', 2)[1].Trim();
+
+                snmpversion = config.Where(x => x.StartsWith("snmpversion")).FirstOrDefault().Split('=', 2)[1].Trim();
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteError("Problem reading log file", ex.Message);
+                return;
+            }
+                
             VersionCode snmpVersion = VersionCode.V2;
 
             switch (snmpversion.ToUpper())
