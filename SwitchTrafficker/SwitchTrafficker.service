@@ -4,6 +4,7 @@ Description=Gathers switch traffic via SNMP and sends it to influxdb
 [Service]
 # systemd will run this executable to start the service
 ExecStart=/srv/SwitchTrafficker/SwitchTrafficker
+WorkingDirectory=/srv/SwitchTrafficker/
 # to query logs using journalctl, set a logical name here
 SyslogIdentifier=SwitchTrafficker
 
