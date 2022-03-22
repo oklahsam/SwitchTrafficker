@@ -11,38 +11,28 @@ namespace SwitchTrafficker
 {
     public partial class Logging
     {
-        private static string logName = DateTime.Now.ToString("yyyyMMddHHmmssfff");
-        private static string logExt = "log";
-        private static string logPath = Path.Combine(new string[] { ".", "logs" });
-        private static string logFile = Path.Combine(new string[] { logPath , $"{logName}.{logExt}" });
+        private static string logFile = string.Empty;
         private static List<LogMessage> logMessages = new List<LogMessage>();
 
-        public static void InitializeLogs()
+        public static void InitializeLogs(string _logPath)
         {
             try
             {
-                if (!Directory.Exists(logPath))
+                logFile = Path.Combine(new string[] { _logPath, $"SwitchTrafficker.log" });
+
+                if (!Directory.Exists(_logPath))
                 {
-                    Directory.CreateDirectory(logPath);
+                    Directory.CreateDirectory(_logPath);
                 }
 
                 Task.Run(() => StartLogs());
 
                 Write("Startup logging", LogType.Information);
-                var files = Directory.GetFiles(logPath);
-                var cleaned = 0;
-                foreach (var file in files)
-                {
-                    var fileInfo = new FileInfo(file);
-                    if (fileInfo.LastWriteTime <= DateTime.Now.AddDays(-30))
-                    {
-                        cleaned++;
-                        fileInfo.Delete();
-                    }
-                }
-                Write($"{cleaned} logs older than 30 days removed", LogType.Information);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private static void StartLogs()
@@ -65,8 +55,9 @@ namespace SwitchTrafficker
                         }
                         Thread.Sleep(500);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine(ex.Message);
                     }
                 }
             }
@@ -101,6 +92,7 @@ namespace SwitchTrafficker
                 message = message,
                 type = logType
             });
+            Console.WriteLine(message);
         }
 
         private static void Log(string message, LogType logType)

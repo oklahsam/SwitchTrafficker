@@ -17,8 +17,6 @@ namespace SwitchTrafficker
     {
         static async Task Main(string[] args)
         { 
-            Logging.InitializeLogs();
-
             string[] config;
 
             string influxdb = string.Empty;
@@ -34,7 +32,11 @@ namespace SwitchTrafficker
                 string configPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf" });
                 config = File.ReadAllLines(configPath).Where(x => !x.StartsWith("#") && !string.IsNullOrWhiteSpace(x)).ToArray();
 
-                if (config.Length <= 1)
+                string logPath = config.Where(x => x.StartsWith("logpath")).FirstOrDefault().Split('=',2)[1].Trim();
+
+                Logging.InitializeLogs(logPath);
+
+                if (config.Length <= 2)
                     throw new Exception("Invalid config file. Please edit SwitchTrafficker.conf", null);
 
 
@@ -47,8 +49,7 @@ namespace SwitchTrafficker
             }
             catch (Exception ex)
             {
-                Logging.WriteError("Problem reading log file", ex.Message);
-                Console.WriteLine(ex.Message);
+                Logging.WriteError("Problem reading config file", ex.Message);
                 return;
             }
                 
