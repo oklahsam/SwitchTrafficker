@@ -7,11 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="install.sh" />
     <None Remove="SwitchTrafficker.conf" />
     <None Remove="SwitchTrafficker.service" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="install.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="SwitchTrafficker.conf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

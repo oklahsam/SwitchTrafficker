@@ -16,7 +16,7 @@ namespace SwitchTrafficker
     internal class Program
     {
         static async Task Main(string[] args)
-        {
+        { 
             Logging.InitializeLogs();
 
             string[] config;
@@ -29,8 +29,14 @@ namespace SwitchTrafficker
 
             try
             {
+                Console.WriteLine("Reading configuration file....");
+
                 string configPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf" });
                 config = File.ReadAllLines(configPath).Where(x => !x.StartsWith("#") && !string.IsNullOrWhiteSpace(x)).ToArray();
+
+                if (config.Length <= 1)
+                    throw new Exception("Invalid config file. Please edit SwitchTrafficker.conf", null);
+
 
                 influxdb = config.Where(x => x.StartsWith("influxdb")).FirstOrDefault().Split('=', 2)[1].Trim();
                 influxbucket = config.Where(x => x.StartsWith("influxbucket")).FirstOrDefault().Split('=', 2)[1].Trim();
@@ -42,6 +48,7 @@ namespace SwitchTrafficker
             catch (Exception ex)
             {
                 Logging.WriteError("Problem reading log file", ex.Message);
+                Console.WriteLine(ex.Message);
                 return;
             }
                 
@@ -85,6 +92,7 @@ namespace SwitchTrafficker
 
             List<SwitchItem> switches = new List<SwitchItem>();
 
+            Console.WriteLine("Parsing switch list....");
             foreach (var sw in config.Where(x => x.StartsWith("switch")))
             {
                 string[] values = sw.Split('=')[1].Trim().Split(',');
@@ -104,6 +112,7 @@ namespace SwitchTrafficker
             int i = 0;
             foreach (var sw in switches)
             {
+                Console.WriteLine($"Starting task for {sw.name}....");
                 tasks[i] = Task.Factory.StartNew(() => SwitchLoop(sw, influxClient, influxbucket, influxorg, snmpVersion));
                 i++;
             }
@@ -143,10 +152,12 @@ namespace SwitchTrafficker
                 catch (Lextm.SharpSnmpLib.Messaging.TimeoutException ex)
                 {
                     Logging.WriteError($"Problem getting {sw.name} SNMP", ex.Message);
+                    Console.WriteLine(ex.Message);
                 }
                 catch (Exception ex2)
                 {
                     Logging.WriteError($"Problem sending {sw.name} data to influxDB", ex2.Message);
+                    Console.WriteLine(ex2.Message);
                 }
             }
         }
