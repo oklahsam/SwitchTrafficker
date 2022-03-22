@@ -10,7 +10,7 @@ namespace SwitchTrafficker
 {
     public class SNMP
     {
-        public static List<PointData> ProcessPorts(List<Variable> ports, List<Variable> bytesIn, List<Variable> bytesOut, SwitchItem sw, DateTime timeStamp)
+        public static List<PointData> ProcessPorts(List<Variable> ports, List<Variable> bytesIn, List<Variable> bytesOut, List<Variable> desc, SwitchItem sw, DateTime timeStamp)
         {
             List<PointData> points = new List<PointData>(); 
             foreach (var port in ports)
@@ -19,6 +19,7 @@ namespace SwitchTrafficker
 
                 long portBytesIn = long.Parse(bytesIn.Where(x => x.Id.ToString().EndsWith(portID)).FirstOrDefault()?.Data.ToString() ?? "0");
                 long portBytesOut = long.Parse(bytesOut.Where(x => x.Id.ToString().EndsWith(portID)).FirstOrDefault()?.Data.ToString() ?? "0");
+                string portdesc = desc.Where(x => x.Id.ToString().EndsWith(portID)).FirstOrDefault()?.Data.ToString() ?? string.Empty;
                 string portName = port?.Data.ToString() ?? "";
 
                 var point = PointData.Measurement("bytesIn")
@@ -31,6 +32,13 @@ namespace SwitchTrafficker
                 point = PointData.Measurement("bytesOut")
                     .Tag("name", portName)
                     .Field(sw.name, portBytesOut)
+                    .Timestamp(timeStamp, InfluxDB.Client.Api.Domain.WritePrecision.Ms);
+
+                points.Add(point);
+
+                point = PointData.Measurement("portDesc")
+                    .Tag("name", portName)
+                    .Field(sw.name, portdesc)
                     .Timestamp(timeStamp, InfluxDB.Client.Api.Domain.WritePrecision.Ms);
 
                 points.Add(point);

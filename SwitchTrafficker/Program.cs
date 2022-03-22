@@ -130,6 +130,7 @@ namespace SwitchTrafficker
                 List<Variable> ports = new List<Variable>();
                 List<Variable> bytesIn = new List<Variable>();
                 List<Variable> bytesOut = new List<Variable>();
+                List<Variable> desc = new List<Variable>();
 
                 var timeStamp = DateTime.UtcNow;
 
@@ -138,8 +139,9 @@ namespace SwitchTrafficker
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.portList), ports, 10000, 10, WalkMode.WithinSubtree, null, null);
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.bytesIn), bytesIn, 10000, 10, WalkMode.WithinSubtree, null, null);
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.bytesOut), bytesOut, 10000, 10, WalkMode.WithinSubtree, null, null);
+                    Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.portDesc), desc, 10000, 10, WalkMode.WithinSubtree, null, null);
 
-                    List<PointData> points = SNMP.ProcessPorts(ports, bytesIn, bytesOut, sw, timeStamp);
+                    List<PointData> points = SNMP.ProcessPorts(ports, bytesIn, bytesOut, desc, sw, timeStamp);
 
                     using (var writeApi = influxClient.GetWriteApi())
                     {
