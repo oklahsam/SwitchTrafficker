@@ -24,6 +24,7 @@ namespace SwitchTrafficker
             string influxtoken = string.Empty;
             string influxorg = string.Empty;
             string snmpversion = string.Empty;
+            int interval = 30000;
 
             try
             {
@@ -46,6 +47,8 @@ namespace SwitchTrafficker
                 influxorg = config.Where(x => x.StartsWith("influxorg")).FirstOrDefault().Split('=', 2)[1].Trim();
 
                 snmpversion = config.Where(x => x.StartsWith("snmpversion")).FirstOrDefault().Split('=', 2)[1].Trim();
+
+                interval = int.Parse(config.Where(x => x.StartsWith("interval")).FirstOrDefault().Split('=', 2)[1].Trim());
             }
             catch (Exception ex)
             {
@@ -98,12 +101,28 @@ namespace SwitchTrafficker
             {
                 string[] values = sw.Split('=')[1].Trim().Split(',');
 
-                switches.Add(new SwitchItem
+                var swItem = new SwitchItem
                 {
                     name = values[0].Trim(),
                     ip = values[1].Trim(),
                     community = values[2].Trim(),
-                });
+                };
+
+                if (values.Length >= 4)
+                {
+                    if (values[3].Trim().StartsWith('@'))
+                        swItem.interval = int.Parse(values[3].Trim().Replace("@",""));
+                    else
+                        swItem.port = int.Parse(values[3].Trim());
+                }
+
+                if (values.Length == 5)
+                    swItem.interval = int.Parse(values[4].Trim().Replace("@", ""));
+                
+                if (swItem.interval == 0)
+                    swItem.interval = interval;
+
+                switches.Add(swItem);
             }
 
             var influxClient = InfluxDBClientFactory.Create(influxdb, influxtoken);
@@ -150,7 +169,9 @@ namespace SwitchTrafficker
                     }
 
                     stopwatch.Stop();
-                    Thread.Sleep(30000 - (int)stopwatch.ElapsedMilliseconds);
+
+                    int timeRemaining = sw.interval - (int)stopwatch.ElapsedMilliseconds;
+                    Thread.Sleep(timeRemaining > 0 ? timeRemaining : 0);
                 }
                 catch (Lextm.SharpSnmpLib.Messaging.TimeoutException ex)
                 {

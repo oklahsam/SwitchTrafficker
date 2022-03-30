@@ -11,11 +11,13 @@ namespace SwitchTrafficker
     {
         public string name { get; set; } = string.Empty;
         public string ip { get; set; } = string.Empty;
+        public int port { get; set; } = 161;
         public string community { get; set; } = string.Empty;
+        public int interval { get; set; } = 0;
         
         public IPEndPoint endpoint
         {
-            get => new IPEndPoint(IPAddress.Parse(ip), 161);
+            get => new IPEndPoint(IPAddress.Parse(ip), port);
         }
     }
 }
