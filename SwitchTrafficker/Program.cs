@@ -19,6 +19,11 @@ namespace SwitchTrafficker
         { 
             string[] config;
 
+            bool intervalTest = false;
+
+            if (args.Length > 0)
+                intervalTest = args[0].Trim().ToLower() == "intervaltest";
+
             string influxdb = string.Empty;
             string influxbucket = string.Empty;
             string influxtoken = string.Empty;
@@ -127,24 +132,21 @@ namespace SwitchTrafficker
 
             var influxClient = InfluxDBClientFactory.Create(influxdb, influxtoken);
 
-            Task[] tasks = new Task[switches.Count];
+            List<Task> tasks = new List<Task>();
 
-            int i = 0;
             foreach (var sw in switches)
             {
                 Console.WriteLine($"Starting task for {sw.name}....");
-                tasks[i] = Task.Factory.StartNew(() => SwitchLoop(sw, influxClient, influxbucket, influxorg, snmpVersion));
-                i++;
+                tasks.Add(Task.Factory.StartNew(() => SwitchLoop(sw, influxClient, influxbucket, influxorg, snmpVersion, intervalTest)));
             }
 
-            TaskFactory taskFactory = new TaskFactory();
-
-            await taskFactory.ContinueWhenAll(tasks, completedTasks => { });
+            await Task.WhenAll(tasks);
         }
 
-        static Task SwitchLoop(SwitchItem sw, InfluxDBClient influxClient, string influxBucket, string influxOrg, VersionCode snmpVersion)
+        static Task SwitchLoop(SwitchItem sw, InfluxDBClient influxClient, string influxBucket, string influxOrg, VersionCode snmpVersion, bool intervalTest)
         {
-            while (true)
+            bool loop = true;
+            while (loop)
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 List<Variable> ports = new List<Variable>();
@@ -171,7 +173,14 @@ namespace SwitchTrafficker
                     stopwatch.Stop();
 
                     int timeRemaining = sw.interval - (int)stopwatch.ElapsedMilliseconds;
-                    Thread.Sleep(timeRemaining > 0 ? timeRemaining : 0);
+
+                    if (intervalTest)
+                    {
+                        Console.WriteLine($"{sw.name}: {stopwatch.ElapsedMilliseconds} milliseconds");
+                        loop = false;
+                    }
+                    else
+                        Thread.Sleep(timeRemaining > 0 ? timeRemaining : 0);
                 }
                 catch (Lextm.SharpSnmpLib.Messaging.TimeoutException ex)
                 {
@@ -184,6 +193,7 @@ namespace SwitchTrafficker
                     Console.WriteLine(ex2.Message);
                 }
             }
+            return Task.CompletedTask;
         }
     }
 }
