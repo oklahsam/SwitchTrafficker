@@ -35,16 +35,26 @@ namespace SwitchTrafficker
             {
                 Console.WriteLine("Reading configuration file....");
 
-                string configPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf" });
+                string configPath = Path.Combine(new string[] { ".", "Config", "SwitchTrafficker.conf" });
+
+                if (!File.Exists(configPath))
+                {
+                    Console.WriteLine("Config file does not exist. Copying default config file....");
+                    string defaultConfigPath = Path.Combine(new string[] { ".", "SwitchTrafficker.conf.default" });
+                    File.Copy(defaultConfigPath, configPath, true);
+                    Console.WriteLine("Done. Please edit the config file and restart.");
+                    await Task.Delay(2000);
+                    return;
+                }
+
                 config = File.ReadAllLines(configPath).Where(x => !x.StartsWith("#") && !string.IsNullOrWhiteSpace(x)).ToArray();
 
                 string logPath = config.Where(x => x.StartsWith("logpath")).FirstOrDefault().Split('=',2)[1].Trim();
 
                 Logging.InitializeLogs(logPath);
 
-                if (config.Length <= 2)
+                if (config.Length <= 2) 
                     throw new Exception("Invalid config file. Please edit SwitchTrafficker.conf", null);
-
 
                 influxdb = config.Where(x => x.StartsWith("influxdb")).FirstOrDefault().Split('=', 2)[1].Trim();
                 influxbucket = config.Where(x => x.StartsWith("influxbucket")).FirstOrDefault().Split('=', 2)[1].Trim();
@@ -102,32 +112,41 @@ namespace SwitchTrafficker
             List<SwitchItem> switches = new List<SwitchItem>();
 
             Console.WriteLine("Parsing switch list....");
-            foreach (var sw in config.Where(x => x.StartsWith("switch")))
+
+            try
             {
-                string[] values = sw.Split('=')[1].Trim().Split(',');
-
-                var swItem = new SwitchItem
+                foreach (var sw in config.Where(x => x.StartsWith("switch")))
                 {
-                    name = values[0].Trim(),
-                    ip = values[1].Trim(),
-                    community = values[2].Trim(),
-                };
+                    string[] values = sw.Split('=')[1].Trim().Split(',');
 
-                if (values.Length >= 4)
-                {
-                    if (values[3].Trim().StartsWith('@'))
-                        swItem.interval = int.Parse(values[3].Trim().Replace("@",""));
-                    else
-                        swItem.port = int.Parse(values[3].Trim());
+                    var swItem = new SwitchItem
+                    {
+                        name = values[0].Trim(),
+                        ip = values[1].Trim(),
+                        community = values[2].Trim(),
+                    };
+
+                    if (values.Length >= 4)
+                    {
+                        if (values[3].Trim().StartsWith('@'))
+                            swItem.interval = int.Parse(values[3].Trim().Replace("@", ""));
+                        else
+                            swItem.port = int.Parse(values[3].Trim());
+                    }
+
+                    if (values.Length == 5)
+                        swItem.interval = int.Parse(values[4].Trim().Replace("@", ""));
+
+                    if (swItem.interval == 0)
+                        swItem.interval = interval;
+
+                    switches.Add(swItem);
                 }
-
-                if (values.Length == 5)
-                    swItem.interval = int.Parse(values[4].Trim().Replace("@", ""));
-                
-                if (swItem.interval == 0)
-                    swItem.interval = interval;
-
-                switches.Add(swItem);
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteError("Problem parsing switch config", ex.Message);
+                return;
             }
 
             var influxClient = InfluxDBClientFactory.Create(influxdb, influxtoken);
@@ -153,6 +172,7 @@ namespace SwitchTrafficker
                 List<Variable> bytesIn = new List<Variable>();
                 List<Variable> bytesOut = new List<Variable>();
                 List<Variable> desc = new List<Variable>();
+                List<Variable> macs = new List<Variable>();
 
                 var timeStamp = DateTime.UtcNow;
 
@@ -162,8 +182,9 @@ namespace SwitchTrafficker
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.bytesIn), bytesIn, 10000, 10, WalkMode.WithinSubtree, null, null);
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.bytesOut), bytesOut, 10000, 10, WalkMode.WithinSubtree, null, null);
                     Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.portDesc), desc, 10000, 10, WalkMode.WithinSubtree, null, null);
+                    Messenger.BulkWalk(snmpVersion, sw.endpoint, new OctetString(sw.community), null, new ObjectIdentifier(OID.macList), macs, 10000, 10, WalkMode.WithinSubtree, null, null);
 
-                    List<PointData> points = SNMP.ProcessPorts(ports, bytesIn, bytesOut, desc, sw, timeStamp);
+                    List<PointData> points = SNMP.ProcessPorts(ports, bytesIn, bytesOut, desc, macs, sw, timeStamp);
 
                     using (var writeApi = influxClient.GetWriteApi())
                     {
